@@ -25,5 +25,12 @@ def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
 @app.get("/api")
-def read_root():
+def read_api():
     return DB
+
+@app.get("/api/{item_id}")
+def read_api_id(item_id: int):
+    for person in DB:
+        if person.id == item_id:
+            return person
+    return "No user with required ID."
