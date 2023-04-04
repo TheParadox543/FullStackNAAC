@@ -2,6 +2,7 @@ from typing import Union
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+import uvicorn
 
 app = FastAPI()
 
@@ -34,3 +35,6 @@ def read_api_id(item_id: int):
         if person.id == item_id:
             return person
     return "No user with required ID."
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", port=3000, reload=True)
