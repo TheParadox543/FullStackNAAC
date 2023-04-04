@@ -36,5 +36,9 @@ def read_api_id(item_id: int):
             return person
     return "No user with required ID."
 
+@app.post("/api")
+def put_data(apiId: Person):
+    return apiId
+
 # if __name__ == "__main__":
 #     uvicorn.run("main:app", host="192.168.217.1", port=3000, reload=True)
