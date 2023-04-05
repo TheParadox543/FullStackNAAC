@@ -42,3 +42,7 @@ def put_data(apiId: Person):
 
 # if __name__ == "__main__":
 #     uvicorn.run("main:app", host="192.168.217.1", port=3000, reload=True)
+
+# * docker build . -t backend
+# * docker network create foobar
+# * docker run --name backend --rm --network foobar -p 8000:8000 backend

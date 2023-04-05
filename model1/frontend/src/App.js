@@ -17,3 +17,6 @@ function App() {
 }
 
 export default App;
+
+// * docker build . -t frontend
+// * docker run --name frontend --rm --network foobar -p 3000:3000 frontend
