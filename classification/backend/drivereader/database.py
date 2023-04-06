@@ -11,13 +11,24 @@ folders_data = database.folders_data
 exempt_data = database.exempt_data
 
 with open("data/category_list.json", "r") as cat_data:
-    categories = load(cat_data)
+    CATEGORIES = load(cat_data)
 with open("data/code_list.json", "r") as code_data:
-    code_list = load(code_data)
+    CODE_LIST = load(code_data)
+
 
 def fetch_file_document(file_details: dict):
     document = files_data.find_one(file_details)
     return document
+
+def fetch_all_files(filter: dict={}):
+    files_list = []
+    files = files_data.find(filter)
+    for file in files:
+        file["code"] = CODE_LIST[file.pop("code")][0]
+        file.pop("_id")
+        file.pop("parent")
+        files_list.append(file)
+    return files_list
 
 def create_file_document(file_details: dict):
     key = {"_id": file_details.pop("id")}
@@ -37,16 +48,16 @@ def create_exempt_document(file_details: dict):
     )
     return exempt_data.find_one(key)
 
-def fetch_all_files(filter: Optional[dict]=None):
-    files_list = []
-    files = files_data.find(filter)
-    for file in files:
-        files_list.append(file)
-    return files_list
-
 def fetch_folder_document(folder_details: dict):
     document = folders_data.find_one(folder_details)
     return document
+
+def fetch_all_folders():
+    folder_list = []
+    folders = folders_data.find()
+    for folder in folders:
+        folder_list.append(folder)
+    return folder_list
 
 def create_folder_document(folder_details: dict):
     key = {"_id": folder_details.pop("id")}
@@ -57,10 +68,3 @@ def create_folder_document(folder_details: dict):
     )
     document = folders_data.find_one(key)
     return document
-
-def fetch_all_folders():
-    folder_list = []
-    folders = folders_data.find()
-    for folder in folders:
-        folder_list.append(folder)
-    return folder_list

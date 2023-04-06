@@ -1,5 +1,6 @@
 import asyncio
 from time import perf_counter
+from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI
@@ -29,12 +30,17 @@ def read_all_folders():
     return fetch_all_folders()
 
 @app.get("/api/files")
-def read_all_files():
-    return fetch_all_files()
+def read_all_files(code:Optional[str]=None, year:Optional[str]=None):
+    search = {}
+    if code is not None:
+        search["code"] = code
+    if year is not None:
+        search["year"] = year
+    return fetch_all_files(search)
 
-@app.get("/api/files/{code}")
-def read_files_by_code(code: str):
-    return fetch_all_files({"code": code})
+# @app.get("/api/files/{code}")
+# def read_files_by_code(code: str):
+#     return fetch_all_files({"code": code})
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
