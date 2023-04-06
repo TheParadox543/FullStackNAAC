@@ -32,7 +32,7 @@ def read_all_folders():
     return fetch_all_folders()
 
 @app.get("/api/files")
-def read_all_files(code:Optional[CodeValues]=None, year:Optional[str]=None):
+def read_all_files(code:Optional[CodeValues]=None, year:str=""):
     if re.match("\d\d\d\d\-\d\d\d\d", year):
         year1, year2 = [int(x) for x in year.split("-")]
         if year2 != year1 + 1:
