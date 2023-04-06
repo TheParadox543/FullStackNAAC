@@ -42,8 +42,6 @@ handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
 
-EXCEL = ExcelWorker()
-
 def make_connection() -> Optional[Resource]:
     """Provide service to connect with the drive."""
     credentials = None
@@ -153,7 +151,9 @@ def download_classification_sheet():
 def categorize_files():
     """Categorize the files in the various folders according to code."""
     service =  make_connection()
-    categories = EXCEL.classification_list.values()
+    with open("data/classification_list.json", "r") as class_data:
+        file_data = load(class_data)
+    categories = set(file_data.values())
     try:
         with open("data/folders.json", "r") as _file:
             folder_names: list[str] = load(_file)
@@ -210,9 +210,12 @@ def categorize_files():
             if "0" in data[category]:
                 data.pop(category)
 
+    return data
+
 def classify_file(name:str, data):
     """Classify the file in categories based on naming structure."""
-    code_list = EXCEL.code_list
+    with open("data/code_list.json", "r") as code_data:
+        code_list = load(code_data)
     try:
         date, code, extra = name.split("_", 2)
         code = code.upper()

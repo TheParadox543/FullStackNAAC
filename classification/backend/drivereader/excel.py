@@ -1,5 +1,5 @@
 import logging
-from json import dumps
+from json import dumps, dump
 from os import system as ossystem
 from sys import exit as sysexit
 from typing import Optional, TypeVar
@@ -20,7 +20,7 @@ from drivereader.util import sort_dictionary
 
 # Using the logs.
 logger_monitor = logging.getLogger(__name__)
-logger_monitor.setLevel(logging.INFO)
+logger_monitor.setLevel(logging.ERROR)
 handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
@@ -89,6 +89,10 @@ class ExcelWorker():
         with open("data/classification_list.json", "w") as file:
             class_obj = dumps(self.classification_list, indent=4)
             file.write(class_obj)
+        with open("data/category_list.json", "w") as file:
+            category_list = set(self.classification_list.values())
+            category_obj = dumps(list(category_list), indent=4)
+            file.write(category_obj)
         logger_monitor.debug(self.code_list)
         logger_monitor.debug(self.classification_list)
 
