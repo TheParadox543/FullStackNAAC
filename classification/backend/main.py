@@ -1,10 +1,10 @@
 import asyncio
 import re
 from time import perf_counter
-from typing import Optional
+from typing import Annotated, Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 import drivereader.drive as drive
@@ -32,8 +32,15 @@ def read_all_folders():
     return fetch_all_folders()
 
 @app.get("/api/files")
-def read_all_files(code:Optional[CodeValues]=None, year:str=""):
-    if re.match("\d\d\d\d\-\d\d\d\d", year):
+def read_all_files(
+    code: Annotated[Optional[CodeValues],
+        Query(description="The code that needs to be searched for")
+    ]=None,
+    year: Annotated[str,
+        Query(min_length=9, max_length=9,example="2022-2023")
+    ]=""
+):
+    if re.match("\d{4}-\d{4}", year):
         year1, year2 = [int(x) for x in year.split("-")]
         if year2 != year1 + 1:
             year = None
