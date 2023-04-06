@@ -14,8 +14,7 @@ from drivereader._type import (
     Category,
     Classification,
     Code,
-    Name,
-    Year
+    Name
 )
 from drivereader.util import sort_dictionary
 
@@ -93,165 +92,165 @@ class ExcelWorker():
         logger_monitor.debug(self.code_list)
         logger_monitor.debug(self.classification_list)
 
-    def write_data_to_excel(self,
-            drive_data: dict[Category, dict[Year, dict[Code, int]]],
-            exempted: list[tuple[Name, str]]):
-        """Write data from the drive to the excel sheet.
+    # def write_data_to_excel(self,
+    #         drive_data: dict[Category, dict[Year, dict[Code, int]]],
+    #         exempted: list[tuple[Name, str]]):
+    #     """Write data from the drive to the excel sheet.
 
-        Parameters
-        ----------
-        - drive_data: The raw data of the different files that satisfy
-        the necessary conditions in all folders.
-        - exempted: The files that are exempted from classification
-        due to any reason.
-        """
-        workbook = Workbook()
-        workbook.active.title = "exempted"
+    #     Parameters
+    #     ----------
+    #     - drive_data: The raw data of the different files that satisfy
+    #     the necessary conditions in all folders.
+    #     - exempted: The files that are exempted from classification
+    #     due to any reason.
+    #     """
+    #     workbook = Workbook()
+    #     workbook.active.title = "exempted"
 
-        # Loop through all the categories to create new sheets.
-        for category in drive_data:
-            worksheet: Worksheet = workbook.create_sheet(category, -1)
-            category_data = drive_data[category]
-            worksheet.append(["YEAR", "CLASSIFICATION", "COUNT"])
-            # Format headers in each sheet.
-            for i in range(1, 4):
-                worksheet[f"{get_col_let(i)}1"].alignment = Alignment(horizontal="center")
-                worksheet[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
+    #     # Loop through all the categories to create new sheets.
+    #     for category in drive_data:
+    #         worksheet: Worksheet = workbook.create_sheet(category, -1)
+    #         category_data = drive_data[category]
+    #         worksheet.append(["YEAR", "CLASSIFICATION", "COUNT"])
+    #         # Format headers in each sheet.
+    #         for i in range(1, 4):
+    #             worksheet[f"{get_col_let(i)}1"].alignment = Alignment(horizontal="center")
+    #             worksheet[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
 
-            # Append data to the sheet.
-            start, stop, width = 2, 2, 16
-            for year, year_data in category_data.items():
-                worksheet[f"A{start}"] = year
-                for code, val in year_data.items():
-                    name = self.code_list[code][0]
-                    worksheet[f"B{stop}"] = name
-                    worksheet[f"C{stop}"] = val
-                    width = max(width, len(name))
-                    stop += 1
+    #         # Append data to the sheet.
+    #         start, stop, width = 2, 2, 16
+    #         for year, year_data in category_data.items():
+    #             worksheet[f"A{start}"] = year
+    #             for code, val in year_data.items():
+    #                 name = self.code_list[code][0]
+    #                 worksheet[f"B{stop}"] = name
+    #                 worksheet[f"C{stop}"] = val
+    #                 width = max(width, len(name))
+    #                 stop += 1
 
-                # Merge the cells of same years, and center the alignment.
-                worksheet.merge_cells(f"A{start}:A{stop-1}")
-                worksheet[f"A{start}"].alignment = Alignment(horizontal="center",
-                                                            vertical="center")
-                start = stop
-            # Fix width to readable length.
-            worksheet.column_dimensions["B"].width = width
-            worksheet.column_dimensions["A"].width = 13
+    #             # Merge the cells of same years, and center the alignment.
+    #             worksheet.merge_cells(f"A{start}:A{stop-1}")
+    #             worksheet[f"A{start}"].alignment = Alignment(horizontal="center",
+    #                                                         vertical="center")
+    #             start = stop
+    #         # Fix width to readable length.
+    #         worksheet.column_dimensions["B"].width = width
+    #         worksheet.column_dimensions["A"].width = 13
 
-        # Handle exempted data.
-        worksheet = workbook["exempted"]
-        worksheet.append(["File Name", "Folder name"])
-        for i in range(1, 3):
-            worksheet[f"{get_col_let(i)}1"].alignment = Alignment(horizontal="center")
-            worksheet[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
-        width1, width2 = 13, 13
-        # Append data to the sheet.
-        for value in exempted:
-            worksheet.append(value)
-            width1, width2 = max(width1, len(value[0])), max(width2, len(value[1]))
-        # Fix width to readable length
-        worksheet.column_dimensions["A"].width = width1
-        worksheet.column_dimensions["B"].width = width2
+    #     # Handle exempted data.
+    #     worksheet = workbook["exempted"]
+    #     worksheet.append(["File Name", "Folder name"])
+    #     for i in range(1, 3):
+    #         worksheet[f"{get_col_let(i)}1"].alignment = Alignment(horizontal="center")
+    #         worksheet[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
+    #     width1, width2 = 13, 13
+    #     # Append data to the sheet.
+    #     for value in exempted:
+    #         worksheet.append(value)
+    #         width1, width2 = max(width1, len(value[0])), max(width2, len(value[1]))
+    #     # Fix width to readable length
+    #     worksheet.column_dimensions["A"].width = width1
+    #     worksheet.column_dimensions["B"].width = width2
 
-        # Save the workbook, close any instance if saving fails.
-        while True:
-            try:
-                workbook.save("data/categorized.xlsx")
-            except PermissionError:
-                try:
-                    ossystem("taskkill/im EXCEL.EXE categorized.xlsx")
-                except:
-                    pass
-            else:
-                break
-        # * Open the workbook to see the result.
-        ossystem("start EXCEL.EXE data/categorized.xlsx")
+    #     # Save the workbook, close any instance if saving fails.
+    #     while True:
+    #         try:
+    #             workbook.save("data/categorized.xlsx")
+    #         except PermissionError:
+    #             try:
+    #                 ossystem("taskkill/im EXCEL.EXE categorized.xlsx")
+    #             except:
+    #                 pass
+    #         else:
+    #             break
+    #     # * Open the workbook to see the result.
+    #     ossystem("start EXCEL.EXE data/categorized.xlsx")
 
-    def write_naac_data_to_excel(self,
-            drive_data: dict[Category, dict[Year, dict[Code, int]]]):
-        """Write data to excel sheet in naac required format.
+    # def write_naac_data_to_excel(self,
+    #         drive_data: dict[Category, dict[Year, dict[Code, int]]]):
+    #     """Write data to excel sheet in naac required format.
 
-        Parameters
-        ----------
-        - drive_data: The raw data of the different files that satisfy
-        the necessary conditions in all folders.
-        """
-        spec_data = {} # Alias for classification data.
+    #     Parameters
+    #     ----------
+    #     - drive_data: The raw data of the different files that satisfy
+    #     the necessary conditions in all folders.
+    #     """
+    #     spec_data = {} # Alias for classification data.
 
-        # Take the data for 22-23 and put in naac excel.
-        for category_data in drive_data.values():
-            for year, year_data in category_data.items():
-                if year == "2022-2023":
-                    for code, value in year_data.items():
-                        if self.code_list.get(code):
-                            for spec in self.code_list[code][2]:
-                                spec_data.update({
-                                    spec: spec_data.get(spec, 0) + value
-                                })
-        spec_data = sort_dictionary(spec_data)
+    #     # Take the data for 22-23 and put in naac excel.
+    #     for category_data in drive_data.values():
+    #         for year, year_data in category_data.items():
+    #             if year == "2022-2023":
+    #                 for code, value in year_data.items():
+    #                     if self.code_list.get(code):
+    #                         for spec in self.code_list[code][2]:
+    #                             spec_data.update({
+    #                                 spec: spec_data.get(spec, 0) + value
+    #                             })
+    #     spec_data = sort_dictionary(spec_data)
 
-        naac_wb = Workbook()
-        naac_ws: Worksheet = naac_wb.active
-        naac_ws.title = "2022-2023"
-        start, width = 1, 13
-        logger_monitor.debug(spec_data)
+    #     naac_wb = Workbook()
+    #     naac_ws: Worksheet = naac_wb.active
+    #     naac_ws.title = "2022-2023"
+    #     start, width = 1, 13
+    #     logger_monitor.debug(spec_data)
 
-        # * Entering the data that is there.
-        # for spec in spec_data:
-        #     number = int(spec[0])
-        #     if old_number != number:
-        #         naac_ws.merge_cells(f"A{start}:A{stop}")
-        #         start = stop + 1
-        #         naac_ws[f"A{start}"].alignment = Alignment(horizontal="center",
-        #                                                    vertical="center")
-        #         old_number = number
-        #         # stop += 1
-        #         naac_ws[f"A{start}"] = self.categories[number]
-        #         width = max(width, len(self.categories[number])*1.3)
-        #     stop += 1
-        #     naac_ws[f"B{stop}"] = spec
-        #     naac_ws[f"C{stop}"] = spec_data[spec]
-        # naac_ws.column_dimensions["A"].width = width
+    #     # * Entering the data that is there.
+    #     # for spec in spec_data:
+    #     #     number = int(spec[0])
+    #     #     if old_number != number:
+    #     #         naac_ws.merge_cells(f"A{start}:A{stop}")
+    #     #         start = stop + 1
+    #     #         naac_ws[f"A{start}"].alignment = Alignment(horizontal="center",
+    #     #                                                    vertical="center")
+    #     #         old_number = number
+    #     #         # stop += 1
+    #     #         naac_ws[f"A{start}"] = self.categories[number]
+    #     #         width = max(width, len(self.categories[number])*1.3)
+    #     #     stop += 1
+    #     #     naac_ws[f"B{stop}"] = spec
+    #     #     naac_ws[f"C{stop}"] = spec_data[spec]
+    #     # naac_ws.column_dimensions["A"].width = width
 
-        # * Entering all specification codes.
-        naac_ws.append(["Classification", "Code", "Count"])
-        start, word = 1, "Classification"
-        for num, (classification, category) in \
-                enumerate(self.classification_list.items(), 2):
-            naac_ws.append({
-                    "B": classification,
-                    "C": spec_data.get(classification, 0)
-            })
-            width = max(width, len(category)*1.2)
-            # When word changes, merge cells.
-            if word != category:
-                naac_ws.merge_cells(f"A{start}:A{num-1}")
-                naac_ws[f"A{start}"].alignment = Alignment(
-                    horizontal="center", vertical="center"
-                )
-                naac_ws[f"A{start}"] = word
-                start, word = num, category
-        else:
-            # Merge remaining categories.
-            naac_ws.merge_cells(f"A{start}:A{num}")
-            naac_ws[f"A{start}"].alignment = Alignment(horizontal="center",
-                                                        vertical="center")
-            naac_ws[f"A{start}"] = category
+    #     # * Entering all specification codes.
+    #     naac_ws.append(["Classification", "Code", "Count"])
+    #     start, word = 1, "Classification"
+    #     for num, (classification, category) in \
+    #             enumerate(self.classification_list.items(), 2):
+    #         naac_ws.append({
+    #                 "B": classification,
+    #                 "C": spec_data.get(classification, 0)
+    #         })
+    #         width = max(width, len(category)*1.2)
+    #         # When word changes, merge cells.
+    #         if word != category:
+    #             naac_ws.merge_cells(f"A{start}:A{num-1}")
+    #             naac_ws[f"A{start}"].alignment = Alignment(
+    #                 horizontal="center", vertical="center"
+    #             )
+    #             naac_ws[f"A{start}"] = word
+    #             start, word = num, category
+    #     else:
+    #         # Merge remaining categories.
+    #         naac_ws.merge_cells(f"A{start}:A{num}")
+    #         naac_ws[f"A{start}"].alignment = Alignment(horizontal="center",
+    #                                                     vertical="center")
+    #         naac_ws[f"A{start}"] = category
 
-            # Fix alignment and font for headers.
-            for i in range(1, 4):
-                naac_ws[f"{get_col_let(i)}1"].alignment = Alignment(
-                    horizontal="center", vertical="center")
-                naac_ws[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
-            # Improve readability of category column.
-            naac_ws.column_dimensions["A"].width = width
+    #         # Fix alignment and font for headers.
+    #         for i in range(1, 4):
+    #             naac_ws[f"{get_col_let(i)}1"].alignment = Alignment(
+    #                 horizontal="center", vertical="center")
+    #             naac_ws[f"{get_col_let(i)}1"].font = Font(bold=True, size=12)
+    #         # Improve readability of category column.
+    #         naac_ws.column_dimensions["A"].width = width
 
-        # Save the workbook, close any instances if saving fails.
-        while True:
-            try:
-                naac_wb.save("data/naac.xlsx")
-                break
-            except PermissionError:
-                logger_monitor("Failed to save naac.xlsx")
-                ossystem("taskkill /im EXCEL.EXE naac.xlsx")
-        ossystem("start EXCEL.EXE data/naac.xlsx")
+    #     # Save the workbook, close any instances if saving fails.
+    #     while True:
+    #         try:
+    #             naac_wb.save("data/naac.xlsx")
+    #             break
+    #         except PermissionError:
+    #             logger_monitor("Failed to save naac.xlsx")
+    #             ossystem("taskkill /im EXCEL.EXE naac.xlsx")
+    #     ossystem("start EXCEL.EXE data/naac.xlsx")
