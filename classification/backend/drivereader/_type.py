@@ -7,11 +7,21 @@ Code = TypeVar("Code", bound=str)
 Name = TypeVar("Name", bound=str)
 Year = TypeVar("Year", bound=str)
 
+# Category - The name of major types of requirements.
+# Classification - The numeric code.
+# Code - A 4 letter (sometimes 3) that represents what it is.
+# Name - The full name of the previous mentioned.
+
+class CodeList(TypedDict):
+    """dict[Code, tuple[Name, Category, list[Classification]]]"""
+    Code: tuple[Name, Category, list[Classification]]
+
 class FileBasic(TypedDict, total=False):
-    kind: str
     id: str
     name: str
     mimeType: str
+    webViewLink: str
+    parent: list[str]
 
 class File(BaseModel):
     kind: str

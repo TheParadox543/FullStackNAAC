@@ -9,7 +9,7 @@ from os import path, remove
 from os import system
 from pprint import PrettyPrinter
 from sys import exit
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Union
 
 # Import project specific modules.
 from google.auth.exceptions import RefreshError
@@ -25,10 +25,14 @@ from drivereader._type import (
     Category,
     Code,
     Name,
-    Year
+    Year,
+    CodeList
 )
 from drivereader.util import sort_dictionary
-from drivereader.database import create_folder_document
+from drivereader.database import (
+    create_folder_document,
+    create_file_document
+)
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -152,6 +156,8 @@ def sort_files():
     service = make_connection()
     with open("data/category_list.json", "r") as cat_data:
         categories = load(cat_data)
+    with open("data/code_list.json", "r") as code_data:
+        code_list = load(code_data)
     try:
         with open("data/folders.json", "r") as _file:
             folder_names: list[str] = load(_file)
@@ -164,8 +170,61 @@ def sort_files():
     for folder_search in folder_names:
         folder = search_folder(folder_search, service)
         create_folder_document(folder)
-        folders.append(folder)
+
+        folder_id = folder.get("_id")
+        try:
+            page_token = None
+            while True:
+                # Search for all files with the folder as parent.
+                response = service.files().list(
+                    q=f"'{folder_id}' in parents and trashed = false",
+                    spaces='drive',
+                    fields='nextPageToken, files(id, name, mimeType)',
+                    pageToken=page_token
+                ).execute()
+
+                for file in response.get("files"):
+                    # logger_monitor.info(file)
+                    file: FileBasic
+                    if file.get("name") is not None:
+                        year, code = file_details_from_name(file.get("name"), code_list)
+                        if year is not None and code is not None:
+                            file["year"] = year
+                            file["code"] = code
+                        file["parent"] = folder_id
+                    create_file_document(file)
+                page_token = response.get("nextPageToken", None)
+
+                if page_token is None:
+                    break
+
+        except HttpError as error:
+            logger_monitor.exception(f"An error occurred: {error}")
+
     return folders
+
+def file_details_from_name(name: str, code_list: CodeList):
+    try:
+        date, code, _ = name.split("_", 2)
+        code = code.upper()
+        if code not in code_list:
+            raise KeyError
+    except ValueError:
+        return None, None
+    except KeyError:
+        return None, None
+    else:
+        try:
+            year, month = int(date[:4]), int(date[4:6])
+            # print(year, month, day)
+            if month > 0 and month < 5:
+                year = f"{year-1}-{year}"
+            else:
+                year = f"{year}-{year+1}"
+        except ValueError:
+            return None, None
+        else:
+            return year, code
 
 def categorize_files():
     """Categorize the files in the various folders according to code."""
