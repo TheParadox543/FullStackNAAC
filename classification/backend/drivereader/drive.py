@@ -96,38 +96,47 @@ def make_connection() -> Optional[Resource]:
     service = build("drive", "v3", credentials=credentials)
     return service
 
-def search_file_by_name(file_name: str) -> Optional[FileBasic]:
+def search_file_by_name(file_name: str, service=None) -> Optional[FileBasic]:
     """Search for a specific file."""
-    service = make_connection()
-    if service is not None:
-        try:
-            response = service.files().list(
-                q=f"name contains '{file_name}'"
-            ).execute()
-            files = response.get("files", None)
-            if files is not None and len(files) != 0:
-                return files[0]
-            else: return None
+    if service is None:
+        service = make_connection()
+        if service is None:
+            return
+    try:
+        response = service.files().list(
+            q=f"name contains '{file_name}'"
+        ).execute()
+        files = response.get("files", None)
+        if files is not None and len(files) != 0:
+            return files[0]
+        else: return None
 
-        except HttpError as error:
-            logger_monitor(f"An error occurred: {error}")
+    except HttpError as error:
+        logger_monitor(f"An error occurred: {error}")
+        return None
+
+def search_folder(category_name: str, service=None) -> FileBasic:
+    """Search for a specific folder."""
+    if service is None:
+        service = make_connection()
+        if service is None:
             return None
+    try:
+        response = service.files().list(
+            q=f"name contains '{category_name}' and mimeType = \
+                'application/vnd.google-apps.folder'",
+            fields="files(name, id)"
+        ).execute()
+        folders = response.get("files", None)
+        if len(folders) > 0:
+            return folders[0]
+        else: return None
 
-    def search_folder(self, category_name: str):
-        """Search for a specific folder."""
-        try:
-            response = self.service.files().list(
-                q=f"name contains '{category_name}' and mimeType = \
-                    'application/vnd.google-apps.folder'"
-            ).execute()
-            folders = response.get("files", None)
-            if len(folders) > 0:
-                return folders[0]
-            else: return None
+    except HttpError as error:
+        logger_monitor(f"An error occurred: {error}")
+        return None
 
-        except HttpError as error:
-            logger_monitor(f"An error occurred: {error}")
-            return None
+
 
     def download_sheet(self):
         """Download the required excel sheet."""
