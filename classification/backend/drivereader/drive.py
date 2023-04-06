@@ -21,12 +21,10 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 from drivereader._type import (
-    FileBasic,
-    Category,
-    Code,
-    Name,
-    Year,
-    CodeList
+    BaseFile,
+    FileFull,
+    Folder,
+    CodeList,
 )
 from drivereader.util import sort_dictionary
 from drivereader.database import (
@@ -82,7 +80,7 @@ def make_connection() -> Optional[Resource]:
     service = build("drive", "v3", credentials=credentials)
     return service
 
-def search_file_by_name(file_name: str, service=None) -> Optional[FileBasic]:
+def search_file_by_name(file_name: str, service=None) -> Optional[BaseFile]:
     """Search for a specific file."""
     if service is None:
         service = make_connection()
@@ -101,7 +99,7 @@ def search_file_by_name(file_name: str, service=None) -> Optional[FileBasic]:
         logger_monitor.exception(f"An error occurred: {error}")
         return None
 
-def search_folder(category_name: str, service=None) -> FileBasic:
+def search_folder(category_name: str, service=None) -> Folder:
     """Search for a specific folder."""
     if service is None:
         service = make_connection()
@@ -183,7 +181,7 @@ def sort_files():
                 ).execute()
 
                 for file in response.get("files"):
-                    file: FileBasic
+                    file: BaseFile
                     if file.get("name") is not None:
                         year, code = file_details_from_name(file.get("name"), code_list)
                         file["parent"] = folder_id
