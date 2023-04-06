@@ -16,12 +16,18 @@ class CodeList(TypedDict):
     """dict[Code, tuple[Name, Category, list[Classification]]]"""
     Code: tuple[Name, Category, list[Classification]]
 
-class FileBasic(TypedDict, total=False):
+class BaseFile(TypedDict):
     id: str
     name: str
     mimeType: str
-    webViewLink: str
+
+class FileFull(BaseFile):
+    code: str
+    year: str
     parent: list[str]
+
+class Folder(BaseFile):
+    webViewLink: str
 
 class File(BaseModel):
     kind: str
