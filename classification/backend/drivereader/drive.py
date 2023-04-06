@@ -37,7 +37,6 @@ handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
 
-
 # * Declare a few types to help with understanding.
 Category = TypeVar("Category", bound=str)
 Classification = TypeVar("Classification", bound=str)
@@ -112,7 +111,7 @@ def search_file_by_name(file_name: str, service=None) -> Optional[FileBasic]:
         else: return None
 
     except HttpError as error:
-        logger_monitor(f"An error occurred: {error}")
+        logger_monitor.exception(f"An error occurred: {error}")
         return None
 
 def search_folder(category_name: str, service=None) -> FileBasic:
@@ -133,40 +132,45 @@ def search_folder(category_name: str, service=None) -> FileBasic:
         else: return None
 
     except HttpError as error:
-        logger_monitor(f"An error occurred: {error}")
+        logger_monitor.exception(f"An error occurred: {error}")
         return None
 
+def download_classification_sheet():
+    """Download the required excel sheet."""
+    service = make_connection()
+    EXCEL_SHEET_ID = "1b5yJfOIWCHXdr7VbFxoNLs_SI5zPR7CL0MsCI1zqWaM"
+    try:
+        mime_type = "application/vnd.openxmlformats-officedocument"
+        mime_type += ".spreadsheetml.sheet"
+        request = service.files().export_media(fileId=EXCEL_SHEET_ID,
+                                                    mimeType=mime_type)
+        _file = BytesIO()
+        downloader = MediaIoBaseDownload(_file, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            logger_monitor.info(F'Download {int(status.progress() * 100)}%.')
 
+        while True:
+            try:
+                with open("data/doc_classification.xlsx", "wb") as write_file:
+                    write_file.write(_file.getbuffer())
+            except PermissionError:
+                system("taskkill /im EXCEL.EXE naac.xlsx")
+            except FileNotFoundError:
+                system("MKDIR data")
+            else:
+                return True
 
-    def download_sheet(self):
-        """Download the required excel sheet."""
-        self.excel_sheet_id = "1b5yJfOIWCHXdr7VbFxoNLs_SI5zPR7CL0MsCI1zqWaM"
+    except HttpError as error:
+        logger_monitor.exception(f"{error} has occurred.")
+    return False
+
         try:
-            mime_type = "application/vnd.openxmlformats-officedocument"
-            mime_type += ".spreadsheetml.sheet"
-            request = self.service.files().export_media(fileId=self.excel_sheet_id,
-                                                        mimeType=mime_type)
-            file = BytesIO()
-            downloader = MediaIoBaseDownload(file, request)
-            done = False
-            while done is False:
-                status, done = downloader.next_chunk()
-
             while True:
-                try:
-                    with open("data/doc_classification.xlsx", "wb") as write_file:
-                        write_file.write(file.getbuffer())
-                except PermissionError:
-                    system("taskkill /im EXCEL.EXE naac.xlsx")
-                else:
                     break
 
-            logger_monitor(F'Download {int(status.progress() * 100)}%.')
-            return True
-
         except HttpError as error:
-            logger_monitor(f"{error} has occurred.")
-            return False
 
     def categorize_files(self):
         """Categorize the files in the various folders according to code."""
@@ -228,6 +232,7 @@ def search_folder(category_name: str, service=None) -> FileBasic:
 
     def classify_file(self, name:str):
         """Classify the file in categories based on naming structure."""
+            logger_monitor.exception(f"An error occurred: {error}")
         try:
             date, code, extra = name.split("_", 2)
             code = code.upper()
