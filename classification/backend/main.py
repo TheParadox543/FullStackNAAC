@@ -8,7 +8,11 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 import drivereader.drive as drive
-from drivereader.database import fetch_all_folders, fetch_all_files
+from drivereader.database import (
+    fetch_all_folders,
+    fetch_all_files,
+    fetch_naac_count
+)
 from _type import CodeValues
 
 time_now = perf_counter()
@@ -26,6 +30,10 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"Ping": "Pong"}
+
+@app.get("/api/naac")
+def get_naac_data():
+    return fetch_naac_count()
 
 @app.get("/api/folders")
 def read_all_folders():

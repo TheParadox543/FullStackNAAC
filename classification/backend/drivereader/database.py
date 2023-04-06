@@ -16,6 +16,27 @@ with open("data/code_list.json", "r") as code_data:
     CODE_LIST = load(code_data)
 
 
+def fetch_naac_count():
+    result = files_data.aggregate([
+        {
+            '$match': {
+                'year': '2021-2022'
+            }
+        }, {
+            '$group': {
+                '_id': '$code',
+                'count': {
+                    '$count': {}
+                }
+            }
+        }
+    ])
+    files = {}
+    for file in result:
+        for code in CODE_LIST[file["_id"]][2]:
+            c = files.get(code, 0)
+            files[code] = c + file["count"]
+    return files
 def fetch_file_document(file_details: dict):
     document = files_data.find_one(file_details)
     return document
