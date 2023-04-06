@@ -9,18 +9,19 @@ from os import path, remove
 from os import system
 from pprint import PrettyPrinter
 from sys import exit
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 # Import project specific modules.
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 from drivereader.excel import ExcelWorker
+from drivereader._type import File, FileList
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -57,55 +58,46 @@ def sort_dictionary(unsorted_dict: dict[str, ], reverse=False):
     - sorted_dict`dict[str, Any]`: The dictionary with keys sorted.
     """
     order_list: list[str] = sorted(unsorted_dict.keys(), reverse=reverse)
-    sorted_dictionary = dict({i: unsorted_dict[i] for i in order_list})
+    sorted_dictionary = {i: unsorted_dict[i] for i in order_list}
     return sorted_dictionary
 
+def make_connection() -> Optional[Resource]:
+    """Provide service to connect with the drive."""
+    credentials = None
+    if path.exists("token.json"):
+        credentials = Credentials.from_authorized_user_file(
+            "token.json",
+            SCOPES
+        )
 
-class DriveReader():
-    """This project aims to read files in a drive and categorize them."""
-
-    def __init__(self) -> None:
-        self.credentials = None
-        self.initialize_connection()
-
-    def initialize_connection(self):
-        """Make the initial connection with drive."""
-        # The file stores user's access and refresh tokens, and is created
-        # automatically when first authorization flow is completed.
-        if path.exists("token.json"):
-            self.credentials = Credentials.from_authorized_user_file(
-                "token.json",
-                SCOPES
-            )
-
-        if not self.credentials or not self.credentials.valid:
-            refresh = False
-            if (self.credentials and self.credentials.expired
-                    and self.credentials.refresh_token):
-                try:
-                    self.credentials.refresh(Request())
-                except RefreshError:
-                    remove("token.json")
-                else:
-                    refresh = True
-            if refresh is False:
+    if not credentials or not credentials.valid:
+        refresh = False
+        if (credentials and credentials.expired
+                and credentials.refresh_token):
+            try:
+                credentials.refresh(Request())
+            except RefreshError:
+                remove("token.json")
+            else:
+                refresh = True
+        if refresh is False:
+            try:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES)
-                self.credentials = flow.run_local_server(port=0)
-            # Save the credentials for the next run.
-            with open("token.json", "w") as token:
-                token.write(self.credentials.to_json())
-
-        # Create a connection with drive.
-        self.service = build("drive", "v3", credentials=self.credentials)
-
-        if self.credentials and self.credentials.valid:
-            return "Connection made."
-        else:
-            return "Connection failed."
-
     def search_file(self, file_name: str):
         """Search for a specific file."""
+            except FileNotFoundError:
+                print("Credential file not found.")
+                return None
+            credentials = flow.run_local_server(port=0)
+        # Save the credentials for the next run.
+        with open("token.json", "w") as token:
+            token.write(credentials.to_json())
+
+    # Create a connection with drive.
+    service = build("drive", "v3", credentials=credentials)
+    return service
+
         try:
             response = self.service.files().list(
                 q=f"name contains '{file_name}'"
