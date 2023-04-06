@@ -21,7 +21,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 from drivereader.excel import ExcelWorker
-from drivereader._type import File, FileList
+from drivereader._type import FileBasic
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -84,8 +84,6 @@ def make_connection() -> Optional[Resource]:
             try:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     "credentials.json", SCOPES)
-    def search_file(self, file_name: str):
-        """Search for a specific file."""
             except FileNotFoundError:
                 print("Credential file not found.")
                 return None
@@ -98,11 +96,18 @@ def make_connection() -> Optional[Resource]:
     service = build("drive", "v3", credentials=credentials)
     return service
 
+def search_file_by_name(file_name: str) -> Optional[FileBasic]:
+    """Search for a specific file."""
+    service = make_connection()
+    if service is not None:
         try:
-            response = self.service.files().list(
+            response = service.files().list(
                 q=f"name contains '{file_name}'"
             ).execute()
-            return response.get("files", None)
+            files = response.get("files", None)
+            if files is not None and len(files) != 0:
+                return files[0]
+            else: return None
 
         except HttpError as error:
             logger_monitor(f"An error occurred: {error}")

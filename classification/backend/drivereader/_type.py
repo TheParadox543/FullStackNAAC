@@ -1,5 +1,11 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, TypedDict
+
+class FileBasic(TypedDict, total=False):
+    kind: str
+    id: str
+    name: str
+    mimeType: str
 
 class File(BaseModel):
     kind: str
