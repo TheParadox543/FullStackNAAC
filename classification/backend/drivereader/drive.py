@@ -20,7 +20,6 @@ from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
-from drivereader.excel import ExcelWorker
 from drivereader._type import (
     FileBasic,
     Category,
@@ -29,6 +28,7 @@ from drivereader._type import (
     Year
 )
 from drivereader.util import sort_dictionary
+from drivereader.database import create_folder_document
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -106,7 +106,7 @@ def search_folder(category_name: str, service=None) -> FileBasic:
         response = service.files().list(
             q=f"name contains '{category_name}' and mimeType = \
                 'application/vnd.google-apps.folder'",
-            fields="files(name, id)"
+            fields="files(id, name, mimeType, webViewLink)"
         ).execute()
         folders = response.get("files", None)
         if len(folders) > 0:
@@ -148,12 +148,30 @@ def download_classification_sheet():
         logger_monitor.exception(f"{error} has occurred.")
     return False
 
+def sort_files():
+    service = make_connection()
+    with open("data/category_list.json", "r") as cat_data:
+        categories = load(cat_data)
+    try:
+        with open("data/folders.json", "r") as _file:
+            folder_names: list[str] = load(_file)
+    except FileNotFoundError:
+        logger_monitor.exception("Please specify the folders to search in `folders.json`.")
+        data = None
+        return None
+
+    folders = []
+    for folder_search in folder_names:
+        folder = search_folder(folder_search, service)
+        create_folder_document(folder)
+        folders.append(folder)
+    return folders
+
 def categorize_files():
     """Categorize the files in the various folders according to code."""
     service =  make_connection()
-    with open("data/classification_list.json", "r") as class_data:
-        file_data = load(class_data)
-    categories = set(file_data.values())
+    with open("data/category_list.json", "r") as cat_data:
+        categories = load(cat_data)
     try:
         with open("data/folders.json", "r") as _file:
             folder_names: list[str] = load(_file)
