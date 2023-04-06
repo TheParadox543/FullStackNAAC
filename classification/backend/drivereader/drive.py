@@ -31,7 +31,8 @@ from drivereader._type import (
 from drivereader.util import sort_dictionary
 from drivereader.database import (
     create_folder_document,
-    create_file_document
+    create_file_document,
+    create_exempt_document
 )
 
 # If modifying these scopes, delete the file token.json.
@@ -154,24 +155,22 @@ def download_classification_sheet():
 
 def sort_files():
     service = make_connection()
-    with open("data/category_list.json", "r") as cat_data:
-        categories = load(cat_data)
     with open("data/code_list.json", "r") as code_data:
         code_list = load(code_data)
     try:
-        with open("data/folders.json", "r") as _file:
-            folder_names: list[str] = load(_file)
+        with open("data/folders.json", "r") as file:
+            folder_names: list[str] = load(file)
     except FileNotFoundError:
         logger_monitor.exception("Please specify the folders to search in `folders.json`.")
-        data = None
         return None
 
-    folders = []
+    folders, files = [], []
     for folder_search in folder_names:
         folder = search_folder(folder_search, service)
-        create_folder_document(folder)
-
+        folder = create_folder_document(folder)
         folder_id = folder.get("_id")
+        folders.append(folder.get("name"))
+
         try:
             page_token = None
             while True:
@@ -184,15 +183,17 @@ def sort_files():
                 ).execute()
 
                 for file in response.get("files"):
-                    # logger_monitor.info(file)
                     file: FileBasic
                     if file.get("name") is not None:
                         year, code = file_details_from_name(file.get("name"), code_list)
+                        file["parent"] = folder_id
                         if year is not None and code is not None:
                             file["year"] = year
                             file["code"] = code
-                        file["parent"] = folder_id
-                    create_file_document(file)
+                            create_file_document(file)
+                            files.append(file.get("name"))
+                        else:
+                            create_exempt_document(file)
                 page_token = response.get("nextPageToken", None)
 
                 if page_token is None:
@@ -201,7 +202,7 @@ def sort_files():
         except HttpError as error:
             logger_monitor.exception(f"An error occurred: {error}")
 
-    return folders
+    return folders, files
 
 def file_details_from_name(name: str, code_list: CodeList):
     try:
@@ -225,118 +226,3 @@ def file_details_from_name(name: str, code_list: CodeList):
             return None, None
         else:
             return year, code
-
-def categorize_files():
-    """Categorize the files in the various folders according to code."""
-    service =  make_connection()
-    with open("data/category_list.json", "r") as cat_data:
-        categories = load(cat_data)
-    try:
-        with open("data/folders.json", "r") as _file:
-            folder_names: list[str] = load(_file)
-    except FileNotFoundError:
-        logger_monitor.exception("Please specify the folders to search in `folders.json`.")
-        data = None
-        return
-
-    data: dict[Category, dict[Year, dict[Code, int]]] = {
-        i: {
-            "0": {
-                "0": 0
-            }
-        } for i in categories}
-    exempt: list[tuple[Name, str]] = []
-
-    for folder_search in folder_names:
-        folder = search_folder(folder_search, service)
-        folder_id, folder_name = folder.get("id"), folder.get("name")
-        try:
-            page_token = None
-            while True:
-                # Search for all files with the folder as parent.
-                response = service.files().list(
-                    q=f"'{folder_id}' in parents and trashed = false",
-                    spaces='drive',
-                    fields='nextPageToken, files(name)',
-                    pageToken=page_token
-                ).execute()
-
-                for _file in response.get("files"):
-                    logger_monitor.info(_file)
-                    if _file.get("name") is not None:
-                        if_failed = classify_file(_file.get("name"), data)
-                        if if_failed:
-                            exempt.append((if_failed, folder_name))
-                page_token = response.get("nextPageToken", None)
-
-                if page_token is None:
-                    break
-
-        except HttpError as error:
-            logger_monitor.exception(f"An error occurred: {error}")
-
-    else:
-        for category in list(data.keys()):
-            while "0" in data[category]:
-                del data[category]["0"]
-            for year, year_data in data[category].items():
-                while "0" in year_data:
-                    del year_data["0"]
-                data[category][year] = sort_dictionary(year_data)
-            data[category] = sort_dictionary(data[category], True)
-            if "0" in data[category]:
-                data.pop(category)
-
-    return data
-
-def classify_file(name:str, data):
-    """Classify the file in categories based on naming structure."""
-    with open("data/code_list.json", "r") as code_data:
-        code_list = load(code_data)
-    try:
-        date, code, extra = name.split("_", 2)
-        code = code.upper()
-        if code not in code_list:
-            raise KeyError
-    except ValueError:
-        return name
-    except KeyError:
-        return name
-    else:
-        try:
-            year, month = int(date[:4]), int(date[4:6])
-            # print(year, month, day)
-            if month > 0 and month < 5:
-                year = f"{year-1}-{year}"
-            else:
-                year = f"{year}-{year+1}"
-        except ValueError:
-            return name
-        else:
-            category = code_list[code][1]
-            category_data = data.get(category, {"0": {"0": 0}})
-            year_data = category_data.get(year, {"0": 0})
-            code_val = year_data.get(code, 0)
-            year_data.update({code: code_val + 1})
-            category_data.update({year: year_data})
-            data.update({category: category_data})
-
-# def main():
-#     """The main function of DriveReader class."""
-#     download_sheet()
-#     excelWorker = ExcelWorker()
-#     code_list = excelWorker.code_list
-#     categories = excelWorker.classification_list.values()
-#     categorize_files()
-#     if data is not None:
-#         with open("data/data.json", "w") as file:
-#             data_obj = dumps(data, indent=4)
-#             _file.write(data_obj)
-#         with open("data/exempt.json", "w") as file:
-#             exempt_obj = dumps(exempt, indent=4)
-#             _file.write(exempt_obj)
-#         excelWorker.write_data_to_excel(data, exempt)
-#         excelWorker.write_naac_data_to_excel(data)
-
-if __name__ == "__main__":
-    print(make_connection())
