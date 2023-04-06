@@ -21,7 +21,7 @@ from drivereader.util import sort_dictionary
 
 # Using the logs.
 logger_monitor = logging.getLogger(__name__)
-logger_monitor.setLevel(logging.ERROR)
+logger_monitor.setLevel(logging.INFO)
 handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)

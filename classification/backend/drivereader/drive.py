@@ -35,14 +35,14 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-pp = PrettyPrinter(indent=4)
-
 # Using the logs.
 logger_monitor = logging.getLogger(__name__)
 logger_monitor.setLevel(logging.ERROR)
 handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
+
+EXCEL = ExcelWorker()
 
 def make_connection() -> Optional[Resource]:
     """Provide service to connect with the drive."""
@@ -153,8 +153,7 @@ def download_classification_sheet():
 def categorize_files():
     """Categorize the files in the various folders according to code."""
     service =  make_connection()
-    excel_data = ExcelWorker()
-    categories = excel_data.classification_list.values()
+    categories = EXCEL.classification_list.values()
     try:
         with open("data/folders.json", "r") as _file:
             folder_names: list[str] = load(_file)
@@ -188,7 +187,7 @@ def categorize_files():
                 for _file in response.get("files"):
                     logger_monitor.info(_file)
                     if _file.get("name") is not None:
-                        if_failed = classify_file(_file.get("name"), excel_data, data)
+                        if_failed = classify_file(_file.get("name"), data)
                         if if_failed:
                             exempt.append((if_failed, folder_name))
                 page_token = response.get("nextPageToken", None)
@@ -211,9 +210,9 @@ def categorize_files():
             if "0" in data[category]:
                 data.pop(category)
 
-def classify_file(name:str, excel_data, data):
-    code_list = excel_data.code_list
+def classify_file(name:str, data):
     """Classify the file in categories based on naming structure."""
+    code_list = EXCEL.code_list
     try:
         date, code, extra = name.split("_", 2)
         code = code.upper()
@@ -260,14 +259,4 @@ def classify_file(name:str, excel_data, data):
 #         excelWorker.write_naac_data_to_excel(data)
 
 if __name__ == "__main__":
-    # Driver Code
-    try:
-        DR = DriveReader()
-        if DR.credentials and DR.credentials.valid:
-            DR.main()
-        else:
-            print("Could not run the program due to invalid credentials.")
-            print("Fix credentials and try again.")
-            exit()
-    except KeyboardInterrupt:
-        print("\n\nExiting program by interrupt.")
+    print(make_connection())
