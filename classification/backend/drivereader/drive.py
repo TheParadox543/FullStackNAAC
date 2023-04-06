@@ -21,7 +21,14 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 from drivereader.excel import ExcelWorker
-from drivereader._type import FileBasic
+from drivereader._type import (
+    FileBasic,
+    Category,
+    Code,
+    Name,
+    Year
+)
+from drivereader.util import sort_dictionary
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = [
@@ -36,29 +43,6 @@ logger_monitor.setLevel(logging.ERROR)
 handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
-
-# * Declare a few types to help with understanding.
-Category = TypeVar("Category", bound=str)
-Classification = TypeVar("Classification", bound=str)
-Code = TypeVar("Code", bound=str)
-Name = TypeVar("Name", bound=str)
-Year = TypeVar("Year", bound=str)
-
-def sort_dictionary(unsorted_dict: dict[str, ], reverse=False):
-    """A util function to sort the keys of a dictionary.
-
-    Parameters
-    ---------
-    - unsorted_dict`dict[str, Any]`: The dictionary that needs to be sorted.
-    - reverse`bool`: Whether the keys need to be sorted in reverse order.
-
-    Returns
-    ------
-    - sorted_dict`dict[str, Any]`: The dictionary with keys sorted.
-    """
-    order_list: list[str] = sorted(unsorted_dict.keys(), reverse=reverse)
-    sorted_dictionary = {i: unsorted_dict[i] for i in order_list}
-    return sorted_dictionary
 
 def make_connection() -> Optional[Resource]:
     """Provide service to connect with the drive."""
@@ -166,118 +150,114 @@ def download_classification_sheet():
         logger_monitor.exception(f"{error} has occurred.")
     return False
 
+def categorize_files():
+    """Categorize the files in the various folders according to code."""
+    service =  make_connection()
+    excel_data = ExcelWorker()
+    categories = excel_data.classification_list.values()
+    try:
+        with open("data/folders.json", "r") as _file:
+            folder_names: list[str] = load(_file)
+    except FileNotFoundError:
+        logger_monitor.exception("Please specify the folders to search in `folders.json`.")
+        data = None
+        return
+
+    data: dict[Category, dict[Year, dict[Code, int]]] = {
+        i: {
+            "0": {
+                "0": 0
+            }
+        } for i in categories}
+    exempt: list[tuple[Name, str]] = []
+
+    for folder_search in folder_names:
+        folder = search_folder(folder_search, service)
+        folder_id, folder_name = folder.get("id"), folder.get("name")
         try:
+            page_token = None
             while True:
+                # Search for all files with the folder as parent.
+                response = service.files().list(
+                    q=f"'{folder_id}' in parents and trashed = false",
+                    spaces='drive',
+                    fields='nextPageToken, files(name)',
+                    pageToken=page_token
+                ).execute()
+
+                for _file in response.get("files"):
+                    logger_monitor.info(_file)
+                    if _file.get("name") is not None:
+                        if_failed = classify_file(_file.get("name"), excel_data, data)
+                        if if_failed:
+                            exempt.append((if_failed, folder_name))
+                page_token = response.get("nextPageToken", None)
+
+                if page_token is None:
                     break
 
         except HttpError as error:
-
-    def categorize_files(self):
-        """Categorize the files in the various folders according to code."""
-        try:
-            with open("data/folders.json", "r") as file:
-                folder_names: list[str] = load(file)
-        except FileNotFoundError:
-            logger_monitor("Please specify the folders to search in `folders.json`.")
-            self.data = None
-            return
-
-        self.data: dict[Category, dict[Year, dict[Code, int]]] = {
-            i: {
-                "0": {
-                    "0": 0
-                }
-            } for i in self.categories}
-        self.exempt: list[tuple[Name, str]] = []
-
-        for folder_search in folder_names:
-            folder = self.search_folder(folder_search)
-            folder_id, folder_name = folder.get("id"), folder.get("name")
-            try:
-                page_token = None
-                while True:
-                    # Search for all files with the folder as parent.
-                    response = self.service.files().list(
-                        q=f"'{folder_id}' in parents and trashed = false",
-                        spaces='drive',
-                        fields='nextPageToken, files(name)',
-                        pageToken=page_token
-                    ).execute()
-
-                    for file in response.get("files"):
-                        # logger_monitor(file)
-                        if file.get("name") is not None:
-                            if_failed = self.classify_file(file.get("name"))
-                            if if_failed:
-                                self.exempt.append((if_failed, folder_name))
-                    page_token = response.get("nextPageToken", None)
-
-                    if page_token is None:
-                        break
-
-            except HttpError as error:
-                logger_monitor(f"An error occurred: {error}")
-
-        else:
-            for category in list(self.data.keys()):
-                while "0" in self.data[category]:
-                    del self.data[category]["0"]
-                for year, year_data in self.data[category].items():
-                    while "0" in year_data:
-                        del year_data["0"]
-                    self.data[category][year] = sort_dictionary(year_data)
-                self.data[category] = sort_dictionary(self.data[category], True)
-                if "0" in self.data[category]:
-                    self.data.pop(category)
-
-    def classify_file(self, name:str):
-        """Classify the file in categories based on naming structure."""
             logger_monitor.exception(f"An error occurred: {error}")
+
+    else:
+        for category in list(data.keys()):
+            while "0" in data[category]:
+                del data[category]["0"]
+            for year, year_data in data[category].items():
+                while "0" in year_data:
+                    del year_data["0"]
+                data[category][year] = sort_dictionary(year_data)
+            data[category] = sort_dictionary(data[category], True)
+            if "0" in data[category]:
+                data.pop(category)
+
+def classify_file(name:str, excel_data, data):
+    code_list = excel_data.code_list
+    """Classify the file in categories based on naming structure."""
+    try:
+        date, code, extra = name.split("_", 2)
+        code = code.upper()
+        if code not in code_list:
+            raise KeyError
+    except ValueError:
+        return name
+    except KeyError:
+        return name
+    else:
         try:
-            date, code, extra = name.split("_", 2)
-            code = code.upper()
-            if code not in self.code_list:
-                raise KeyError
+            year, month = int(date[:4]), int(date[4:6])
+            # print(year, month, day)
+            if month > 0 and month < 5:
+                year = f"{year-1}-{year}"
+            else:
+                year = f"{year}-{year+1}"
         except ValueError:
             return name
-        except KeyError:
-            return name
         else:
-            try:
-                year, month = int(date[:4]), int(date[4:6])
-                # print(year, month, day)
-                if month > 0 and month < 5:
-                    year = f"{year-1}-{year}"
-                else:
-                    year = f"{year}-{year+1}"
-            except ValueError:
-                return name
-            else:
-                category = self.code_list[code][1]
-                category_data = self.data.get(category, {"0": {"0": 0}})
-                year_data = category_data.get(year, {"0": 0})
-                code_val = year_data.get(code, 0)
-                year_data.update({code: code_val + 1})
-                category_data.update({year: year_data})
-                self.data.update({category: category_data})
+            category = code_list[code][1]
+            category_data = data.get(category, {"0": {"0": 0}})
+            year_data = category_data.get(year, {"0": 0})
+            code_val = year_data.get(code, 0)
+            year_data.update({code: code_val + 1})
+            category_data.update({year: year_data})
+            data.update({category: category_data})
 
-    def main(self):
-        """The main function of DriveReader class."""
-        self.download_sheet()
-        self.excelWorker = ExcelWorker()
-        self.code_list = self.excelWorker.code_list
-        self.categories = self.excelWorker.classification_list.values()
-        self.categorize_files()
-        if self.data is not None:
-            with open("data/data.json", "w") as file:
-                data_obj = dumps(self.data, indent=4)
-                file.write(data_obj)
-            with open("data/exempt.json", "w") as file:
-                exempt_obj = dumps(self.exempt, indent=4)
-                file.write(exempt_obj)
-            self.excelWorker.write_data_to_excel(self.data, self.exempt)
-            self.excelWorker.write_naac_data_to_excel(self.data)
-
+# def main():
+#     """The main function of DriveReader class."""
+#     download_sheet()
+#     excelWorker = ExcelWorker()
+#     code_list = excelWorker.code_list
+#     categories = excelWorker.classification_list.values()
+#     categorize_files()
+#     if data is not None:
+#         with open("data/data.json", "w") as file:
+#             data_obj = dumps(data, indent=4)
+#             _file.write(data_obj)
+#         with open("data/exempt.json", "w") as file:
+#             exempt_obj = dumps(exempt, indent=4)
+#             _file.write(exempt_obj)
+#         excelWorker.write_data_to_excel(data, exempt)
+#         excelWorker.write_naac_data_to_excel(data)
 
 if __name__ == "__main__":
     # Driver Code

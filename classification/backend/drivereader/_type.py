@@ -1,5 +1,11 @@
 from pydantic import BaseModel
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, TypeVar
+
+Category = TypeVar("Category", bound=str)
+Classification = TypeVar("Classification", bound=str)
+Code = TypeVar("Code", bound=str)
+Name = TypeVar("Name", bound=str)
+Year = TypeVar("Year", bound=str)
 
 class FileBasic(TypedDict, total=False):
     kind: str

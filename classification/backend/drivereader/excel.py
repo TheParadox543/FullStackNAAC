@@ -10,37 +10,21 @@ from openpyxl.utils import get_column_letter as get_col_let
 from openpyxl.workbook.workbook import Workbook
 from openpyxl.worksheet.worksheet import Worksheet
 
+from drivereader._type import (
+    Category,
+    Classification,
+    Code,
+    Name,
+    Year
+)
+from drivereader.util import sort_dictionary
+
 # Using the logs.
 logger_monitor = logging.getLogger(__name__)
 logger_monitor.setLevel(logging.ERROR)
 handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
-
-
-# * Declare a few types to help with understanding.
-Category = TypeVar("Category", bound=str)
-Classification = TypeVar("Classification", bound=str)
-Code = TypeVar("Code", bound=str)
-Name = TypeVar("Name", bound=str)
-Year = TypeVar("Year", bound=str)
-
-
-def sort_dictionary(unsorted_dict: dict[str, ], reverse=False):
-    """A util function to sort the keys of a dictionary.
-
-    Parameters
-    ---------
-    - unsorted_dict`dict[str, Any]`: The dictionary that needs to be sorted.
-    - reverse`bool`: Whether the keys need to be sorted in reverse order.
-
-    Returns
-    ------
-    - sorted_dict`dict[str, Any]`: The dictionary with keys sorted.
-    """
-    order_list: list[str] = sorted(unsorted_dict.keys(), reverse=reverse)
-    sorted_dictionary = dict({i: unsorted_dict[i] for i in order_list})
-    return sorted_dictionary
 
 
 class ExcelWorker():
@@ -148,7 +132,7 @@ class ExcelWorker():
                 # Merge the cells of same years, and center the alignment.
                 worksheet.merge_cells(f"A{start}:A{stop-1}")
                 worksheet[f"A{start}"].alignment = Alignment(horizontal="center",
-                                                             vertical="center")
+                                                            vertical="center")
                 start = stop
             # Fix width to readable length.
             worksheet.column_dimensions["B"].width = width
