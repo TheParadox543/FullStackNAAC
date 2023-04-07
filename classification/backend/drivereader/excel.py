@@ -16,7 +16,7 @@ from drivereader._type import (
     Code,
     Name
 )
-from drivereader.util import sort_dictionary
+from drivereader.database import code_insert
 
 # Using the logs.
 logger_monitor = logging.getLogger(__name__)
@@ -75,12 +75,12 @@ class ExcelWorker():
                     if classification not in self.classification_list:
                         self.classification_list[classification] = category
 
-            #Any other sheet, check if any code is missing and then add it.
-            else:
-                for row in ws.iter_rows(min_col=2, max_col=3):
-                    code, name = row[0].value, row[1].value
-                    if code and name and code not in self.code_list:
-                        self.code_list[code] = [name, ws.title, ["Unknown"]]
+            # #Any other sheet, check if any code is missing and then add it.
+            # else:
+            #     for row in ws.iter_rows(min_col=2, max_col=3):
+            #         code, name = row[0].value, row[1].value
+            #         if code and name and code not in self.code_list:
+            #             self.code_list[code] = [name, ws.title, ["Unknown"]]
 
         #Write the generated data to files for evaluation.
         with open("data/code_list.json", "w") as file:
@@ -95,6 +95,10 @@ class ExcelWorker():
             file.write(category_obj)
         logger_monitor.debug(self.code_list)
         logger_monitor.debug(self.classification_list)
+
+        # Write the codes to database.
+        for code, val in self.code_list.items():
+            code_insert(code, val)
 
     # def write_data_to_excel(self,
     #         drive_data: dict[Category, dict[Year, dict[Code, int]]],

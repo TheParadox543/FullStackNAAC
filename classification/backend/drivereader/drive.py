@@ -151,7 +151,7 @@ def download_classification_sheet():
         logger_monitor.exception(f"{error} has occurred.")
     return False
 
-def sort_files():
+def scan_drive():
     service = make_connection()
     with open("data/code_list.json", "r") as code_data:
         code_list = load(code_data)

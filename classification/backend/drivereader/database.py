@@ -9,11 +9,12 @@ database = client.NAAC
 files_data = database.files_data
 folders_data = database.folders_data
 exempt_data = database.exempt_data
+code_collection = database.code_collection
 
-with open("data/category_list.json", "r") as cat_data:
-    CATEGORIES = load(cat_data)
-with open("data/code_list.json", "r") as code_data:
-    CODE_LIST = load(code_data)
+with open("data/category_list.json", "r") as cat_info:
+    CATEGORIES = load(cat_info)
+with open("data/code_list.json", "r") as code_info:
+    CODE_LIST = load(code_info)
 
 
 def fetch_naac_count():
@@ -37,6 +38,7 @@ def fetch_naac_count():
             c = files.get(code, 0)
             files[code] = c + file["count"]
     return files
+
 def fetch_file_document(file_details: dict):
     document = files_data.find_one(file_details)
     return document
@@ -82,10 +84,22 @@ def fetch_all_folders():
 
 def create_folder_document(folder_details: dict):
     key = {"_id": folder_details.pop("id")}
-    result = folders_data.update_one(
+    folders_data.update_one(
         key,
         {"$set": folder_details},
         True
     )
     document = folders_data.find_one(key)
     return document
+
+def code_insert(code: str, values: tuple[str, str, list[str]], /):
+    code_collection.update_one({
+        "_id": code
+    }, {
+        "$set": {
+            "name": values[0],
+            "category": values[1],
+            "classifications": values[2]
+        }
+    }, True
+    )

@@ -7,13 +7,14 @@ import uvicorn
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-import drivereader.drive as drive
+from _type import CodeValues
+from drivereader.drive import scan_drive
 from drivereader.database import (
     fetch_all_folders,
     fetch_all_files,
     fetch_naac_count
 )
-from _type import CodeValues
+from drivereader.excel import ExcelWorker
 
 time_now = perf_counter()
 app = FastAPI()
@@ -31,9 +32,18 @@ app.add_middleware(
 def read_root():
     return {"Ping": "Pong"}
 
+@app.get("/api/refresh")
+def refresh_drive_data():
+    return scan_drive()
+
 @app.get("/api/naac")
 def get_naac_data():
     return fetch_naac_count()
+
+@app.get("/api/read_sheet")
+def read_sheet():
+    excel = ExcelWorker()
+    return excel.code_list
 
 @app.get("/api/folders")
 def read_all_folders():
