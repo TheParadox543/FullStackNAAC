@@ -34,6 +34,7 @@ def read_root():
 
 @app.get("/api/refresh")
 def refresh_drive_data():
+    """Refresh database data by scanning the drive."""
     return scan_drive()
 
 @app.get("/api/naac")

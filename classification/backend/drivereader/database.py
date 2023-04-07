@@ -44,6 +44,7 @@ def fetch_file_document(file_details: dict):
     return document
 
 def fetch_all_files(filter: dict={}):
+    # TODO the system in the API call has changed. Cross check before deployment.
     files_list = []
     files = files_data.find(filter)
     for file in files:

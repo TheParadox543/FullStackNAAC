@@ -163,11 +163,13 @@ def scan_drive():
         return None
 
     folders, files = [], []
+    folder_count, file_count, exempt_count, total_count = 0, 0, 0, 0
     for folder_search in folder_names:
         folder = search_folder(folder_search, service)
         folder = create_folder_document(folder)
         folder_id = folder.get("_id")
         folders.append(folder.get("name"))
+        folder_count += 1
 
         try:
             page_token = None
@@ -179,10 +181,13 @@ def scan_drive():
                     fields='nextPageToken, files(id, name, mimeType)',
                     pageToken=page_token
                 ).execute()
+                total_count += len(response.get("files"))
 
                 for file in response.get("files"):
                     file: BaseFile
-                    if file.get("name") is not None:
+                    name = file.get("name")
+                    if (name.lower().startswith("read") is False and
+                            name is not None):
                         year, code = file_details_from_name(file.get("name"), code_list)
                         file["parent"] = folder_id
                         if year is not None and code is not None:
@@ -190,8 +195,10 @@ def scan_drive():
                             file["code"] = code
                             create_file_document(file)
                             files.append(file.get("name"))
+                            file_count += 1
                         else:
                             create_exempt_document(file)
+                            exempt_count += 1
                 page_token = response.get("nextPageToken", None)
 
                 if page_token is None:
@@ -200,7 +207,12 @@ def scan_drive():
         except HttpError as error:
             logger_monitor.exception(f"An error occurred: {error}")
 
-    return folders, files
+    return {
+        "folder_count": folder_count,
+        "file_count": file_count,
+        "exempt_count": exempt_count,
+        "total_count": total_count
+    }
 
 def file_details_from_name(name: str, code_list: CodeList):
     try:
@@ -216,10 +228,11 @@ def file_details_from_name(name: str, code_list: CodeList):
         try:
             year, month = int(date[:4]), int(date[4:6])
             # print(year, month, day)
-            if month > 0 and month < 5:
-                year = f"{year-1}-{year}"
-            else:
-                year = f"{year}-{year+1}"
+            # if month > 0 and month < 5:
+            #     year = f"{year-1}-{year}"
+            # else:
+            if month >= 5 and month <= 12:
+                year += 1
         except ValueError:
             return None, None
         else:
