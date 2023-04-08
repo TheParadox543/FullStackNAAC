@@ -243,7 +243,8 @@ async def upload_file_to_drive(file: UploadFile):
 
     Parameters
     -----------
-    - file (fastapi.UploadFile): _description_
+    - file (fastapi.UploadFile): The file that needs to be
+    uploaded to drive.
     """
     service = make_connection()
     try:

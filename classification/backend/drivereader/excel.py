@@ -2,7 +2,7 @@ import logging
 from json import dumps, dump
 from os import system as ossystem
 from sys import exit as sysexit
-from typing import TypeVar, None
+from typing import Union
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font
