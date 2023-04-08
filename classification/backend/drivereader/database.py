@@ -18,6 +18,16 @@ with open("data/code_list.json", "r") as code_info:
 
 
 def fetch_naac_count(start_year: int, end_year: int):
+    """Fetch the naac related count for the website.
+
+    Parameters
+    ---------
+    - start_year `int`: The first year from which to look for
+    - end_year `int`: The last year to look for
+
+    Returns:
+        dict: Contains NAAC related sorted by year
+    """
     files = {}
     for year in range(start_year, end_year+1):
         result = files_data.aggregate([
