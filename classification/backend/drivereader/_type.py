@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, TypedDict, TypeVar
+from typing import Union, TypedDict, TypeVar
 
 Category = TypeVar("Category", bound=str)
 Classification = TypeVar("Classification", bound=str)
@@ -34,12 +34,12 @@ class File(BaseModel):
     id: str
     name: str
     mimeType: str
-    description: Optional[str] = None
-    trashed: Optional[bool] = None
-    parents: Optional[list[str]] = None
+    description: Union[str, None] = None
+    trashed: Union[bool, None] = None
+    parents: Union[list[str], None] = None
 
 class FileList(BaseModel):
     kind: str
-    nextPageToken: Optional[str] = None
+    nextPageToken: Union[str, None] = None
     incompleteSearch: bool = False
     files: list[File]

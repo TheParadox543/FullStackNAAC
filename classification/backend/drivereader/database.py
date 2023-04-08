@@ -1,5 +1,5 @@
 from json import load
-from typing import Optional
+from typing import Union
 
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -47,7 +47,7 @@ def fetch_file_document(file_details: dict):
     document = files_data.find_one(file_details)
     return document
 
-def fetch_all_files(code: Optional[str], start_year: int, end_year: int):
+def fetch_all_files(code: Union[str, None], start_year: int, end_year: int):
     files_list = {}
     filter = {}
     for year in range(start_year, end_year+1):

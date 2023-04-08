@@ -1,7 +1,7 @@
 import asyncio
 import re
 from time import perf_counter
-from typing import Annotated, Optional
+from typing import Annotated, Union
 
 import uvicorn
 from fastapi import HTTPException, FastAPI, File, Query, UploadFile
@@ -53,7 +53,7 @@ def refresh_drive_data():
     return scan_drive()
 
 @app.get("/api/naac", tags=["NAAC"])
-def get_naac_data(year: Optional[str]=None):
+def get_naac_data(year: Union[str, None]=None):
     """Get the naac related data.
 
     Returns
@@ -78,7 +78,7 @@ def sort_years():
 
 @app.get("/api/files", tags=["data"])
 def read_all_files(
-    code: Annotated[Optional[str],
+    code: Annotated[Union[str, None],
         Query(description="The code that needs to be searched for")
     ]=None,
     year: Annotated[str,
@@ -99,7 +99,7 @@ async def upload_file_from_client(file: UploadFile):
     return await upload_file_to_drive(file)
     return {"filename": file.filename}
 
-def select_years(year: Optional[str]=None):
+def select_years(year: Union[str, None]=None):
     min_year, max_year = get_valid_years()
     if year is None:
         return min_year, max_year

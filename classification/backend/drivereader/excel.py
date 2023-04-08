@@ -2,7 +2,7 @@ import logging
 from json import dumps, dump
 from os import system as ossystem
 from sys import exit as sysexit
-from typing import Optional, TypeVar
+from typing import TypeVar, None
 
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Font
@@ -63,8 +63,8 @@ class ExcelWorker():
                                                 min_row=3, values_only=True):
                     category: Category = row[0] or category
                     classification: Classification = row[1] or classification
-                    code: Optional[Code] = row[2]
-                    name: Optional[Name] = row[3]
+                    code: Union[Code, None] = row[2]
+                    name: Union[Name, None] = row[3]
 
                     if code and name:
                         if code not in self.code_list:

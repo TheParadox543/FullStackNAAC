@@ -8,7 +8,7 @@ from json import dumps, load
 from os import path, remove
 from os import system
 from sys import exit
-from typing import Optional, TypeVar, Union
+from typing import TypeVar, Union
 
 # Import project specific modules.
 from fastapi import UploadFile
@@ -45,7 +45,7 @@ handler = logging.FileHandler("drive_reader_logs.log")
 handler.setFormatter(logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger_monitor.addHandler(handler)
 
-def make_connection() -> Optional[Resource]:
+def make_connection() -> Union[Resource, None]:
     """Provide service to connect with the drive."""
     credentials = None
     if path.exists("token.json"):
@@ -80,7 +80,7 @@ def make_connection() -> Optional[Resource]:
     service = build("drive", "v3", credentials=credentials)
     return service
 
-def search_file_by_name(file_name: str, service=None) -> Optional[BaseFile]:
+def search_file_by_name(file_name: str, service=None) -> Union[BaseFile, None]:
     """Search for a specific file."""
     if service is None:
         service = make_connection()
