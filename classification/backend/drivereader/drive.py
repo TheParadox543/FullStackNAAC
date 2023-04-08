@@ -7,7 +7,6 @@ from io import BytesIO
 from json import dumps, load
 from os import path, remove
 from os import system
-from pprint import PrettyPrinter
 from sys import exit
 from typing import Optional, TypeVar, Union
 

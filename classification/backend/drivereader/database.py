@@ -43,16 +43,40 @@ def fetch_file_document(file_details: dict):
     document = files_data.find_one(file_details)
     return document
 
-def fetch_all_files(filter: dict={}):
-    # TODO the system in the API call has changed. Cross check before deployment.
-    files_list = []
-    files = files_data.find(filter)
-    for file in files:
-        file["code"] = CODE_LIST[file.pop("code")][0]
-        file.pop("_id")
-        file.pop("parent")
-        files_list.append(file)
+def fetch_all_files(code: Optional[str], start_year: int, end_year: int):
+    files_list = {}
+    filter = {}
+    for year in range(start_year, end_year+1):
+        filter["year"] = year
+        if code is not None:
+            filter["code"] = code
+        files = files_data.find(filter)
+        year_data = []
+        for file in files:
+            file["code"] = CODE_LIST[file.pop("code")][0]
+            file.pop("_id")
+            file.pop("parent")
+            year_data.append(file)
+        files_list[year] = year_data
     return files_list
+
+def get_valid_years() -> tuple[int, int]:
+    """Get the valid years searches can happen."""
+    result = files_data.aggregate([
+        {
+            '$group': {
+                '_id': None,
+                'minValue': {
+                    '$min': "$year"
+                },
+                "maxValue": {
+                    "$max": "$year"
+                }
+            }
+        }
+    ])
+    result = next(result, None)
+    return result.get("minValue"), result.get("maxValue")
 
 def create_file_document(file_details: dict):
     key = {"_id": file_details.pop("id")}
