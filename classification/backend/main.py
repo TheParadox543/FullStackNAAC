@@ -4,7 +4,7 @@ from time import perf_counter
 from typing import Annotated, Optional
 
 import uvicorn
-from fastapi import FastAPI, File, Query, UploadFile
+from fastapi import HTTPException, FastAPI, File, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from _type import CodeValues
@@ -29,7 +29,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
+@app.get("/", tags=["utility"])
 def read_root():
     """Test if the backend works.
 
@@ -39,7 +39,7 @@ def read_root():
     """
     return {"Ping": "Pong"}
 
-@app.get("/api/refresh")
+@app.get("/api/refresh", tags=["utility"])
 def refresh_drive_data():
     """Rescan all documents in the drive and update data.
 
@@ -52,30 +52,31 @@ def refresh_drive_data():
     """
     return scan_drive()
 
-@app.get("/api/naac")
-def get_naac_data():
+@app.get("/api/naac", tags=["NAAC"])
+def get_naac_data(year: Optional[str]=None):
     """Get the naac related data.
 
     Returns
     ------
     - JSON: The data that needs to be shown in the site.
     """
-    return fetch_naac_count()
+    start_year, end_year = select_years(year)
+    return fetch_naac_count(start_year, end_year)
 
-@app.get("/api/read_sheet")
+@app.get("/api/read_sheet", tags=["drive"])
 def read_sheet():
     excel = ExcelWorker()
     return excel.code_list
 
-@app.get("/api/folders")
+@app.get("/api/folders", tags=["drive"])
 def read_all_folders():
     return fetch_all_folders()
 
-@app.get("/api/sort")
+@app.get("/api/sort", tags=["utility"])
 def sort_years():
     return get_valid_years()
 
-@app.get("/api/files")
+@app.get("/api/files", tags=["data"])
 def read_all_files(
     code: Annotated[Optional[str],
         Query(description="The code that needs to be searched for")
@@ -84,28 +85,30 @@ def read_all_files(
         Query(min_length=4, max_length=9,example="2022-2023")
     ]=""
 ):
-    min_year, max_year = get_valid_years()
-    years = [int(x) for x in re.findall("\d{4}", year)]
-    if len(years) == 0:
-        start_year, end_year = min_year, max_year
-    elif len(years) == 1:
-        start_year, end_year = years[0], years[0]
-    elif len(years) == 2:
-        start_year, end_year = years[0], years[1]
-    # else:
-    #     return None
+    start_year, end_year = select_years(year)
     return fetch_all_files(code, start_year, end_year)
 
-@app.post("/api/read-file")
+@app.post("/api/read-file", tags=["utility"])
 async def create_file(file: UploadFile):
     return {"file_size": await file.read()}
 
-@app.post("/api/upload-file")
+@app.post("/api/upload-file", tags=["upload"])
 async def upload_file_from_client(file: UploadFile):
     # with open(f"data/{file.filename}", "wb") as buffer:
     #     buffer.write(await file.read())
     return await upload_file_to_drive(file)
     return {"filename": file.filename}
+
+def select_years(year: Optional[str]=None):
+    min_year, max_year = get_valid_years()
+    if year is None:
+        return min_year, max_year
+    years = [int(x) for x in re.findall("\d{4}", year)]
+    if len(years) == 1:
+        start_year, end_year = years[0], years[0]
+    else:
+        start_year, end_year = years[0], years[1]
+    return start_year, end_year
 
 # @app.get("/api/files/{code}")
 # def read_files_by_code(code: str):

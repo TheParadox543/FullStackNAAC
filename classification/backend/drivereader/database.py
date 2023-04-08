@@ -17,26 +17,30 @@ with open("data/code_list.json", "r") as code_info:
     CODE_LIST = load(code_info)
 
 
-def fetch_naac_count():
-    result = files_data.aggregate([
-        {
-            '$match': {
-                'year': '2021-2022'
-            }
-        }, {
-            '$group': {
-                '_id': '$code',
-                'count': {
-                    '$count': {}
+def fetch_naac_count(start_year: int, end_year: int):
+    files = {}
+    for year in range(start_year, end_year+1):
+        result = files_data.aggregate([
+            {
+                "$match": {
+                    "year": year
+                }
+            }, {
+                "$group": {
+                    "_id": "$code",
+                    "count": {
+                        "$count": {}
+                    }
                 }
             }
-        }
-    ])
-    files = {}
-    for file in result:
-        for code in CODE_LIST[file["_id"]][2]:
-            c = files.get(code, 0)
-            files[code] = c + file["count"]
+        ])
+        year_data = {}
+        for file in result:
+            for code in CODE_LIST[file["_id"]][2]:
+                c = year_data.get(code, 0)
+                year_data[code] = c + file["count"]
+        if len(year_data) != 0:
+            files.update({year: year_data})
     return files
 
 def fetch_file_document(file_details: dict):
@@ -57,7 +61,8 @@ def fetch_all_files(code: Optional[str], start_year: int, end_year: int):
             file.pop("_id")
             file.pop("parent")
             year_data.append(file)
-        files_list[year] = year_data
+        if len(year_data) != 0:
+            files_list[year] = year_data
     return files_list
 
 def get_valid_years() -> tuple[int, int]:
