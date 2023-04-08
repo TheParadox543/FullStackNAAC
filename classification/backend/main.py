@@ -29,29 +29,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/", tags=["utility"])
-def read_root():
-    """Test if the backend works.
-
-    Returns
-    -------
-    - JSON
-    """
-    return {"Ping": "Pong"}
-
-@app.get("/api/refresh", tags=["utility"])
-def refresh_drive_data():
-    """Rescan all documents in the drive and update data.
-
-    Update the data in the database if there is any change to the file
-    names in drive.
-
-    Returns
-    -------
-    - JSON[str, int]: The count of files the program has scanned
-    """
-    return scan_drive()
-
 @app.get("/api/naac", tags=["NAAC"])
 def get_naac_data(year: str=""):
     """Get the naac related data.
@@ -62,6 +39,32 @@ def get_naac_data(year: str=""):
     """
     start_year, end_year = select_years(year)
     return fetch_naac_count(start_year, end_year)
+
+@app.post("/api/upload-file", tags=["upload"])
+async def upload_file_from_client(file: UploadFile):
+    """Upload the file given by user to Google Drive.
+
+    Parameters
+    ---------
+    - file `UploadFile`: The file that needs to be uploaded by the user.
+
+    Returns:
+        dict[str, str]: The id of the file after uploading to drive.
+    """
+    # * If you want to write the file locally, use below.
+    # with open(f"data/{file.filename}", "wb") as buffer:
+    #     buffer.write(await file.read())
+    return await upload_file_to_drive(file)
+
+@app.get("/api/folders", tags=["drive"])
+def read_all_folders():
+    """Get the names of all folders the application has access to.
+
+    Returns
+    --------
+    - list: The drive folders it can read and upload files to
+    """
+    return fetch_all_folders()
 
 @app.get("/api/read_sheet", tags=["drive"])
 def read_sheet():
@@ -74,26 +77,6 @@ def read_sheet():
     """
     excel = ExcelWorker()
     return excel.code_list
-
-@app.get("/api/folders", tags=["drive"])
-def read_all_folders():
-    """Get the names of all folders the application has access to.
-
-    Returns
-    --------
-    - list: The drive folders it can read and upload files to
-    """
-    return fetch_all_folders()
-
-@app.get("/api/sort", tags=["utility"])
-def sort_years():
-    """Fetch the years of which data is available.
-
-    Returns
-    -------
-    - int, int: The starting and ending years of data available.
-    """
-    return get_valid_years()
 
 @app.get("/api/files", tags=["data"])
 def read_all_files(
@@ -118,6 +101,39 @@ def read_all_files(
     start_year, end_year = select_years(year)
     return fetch_all_files(code, start_year, end_year)
 
+@app.get("/", tags=["utility"])
+def read_root():
+    """Test if the backend works.
+
+    Returns
+    -------
+    - JSON
+    """
+    return {"Ping": "Pong"}
+
+@app.get("/api/refresh", tags=["utility"])
+def refresh_drive_data():
+    """Rescan all documents in the drive and update data.
+
+    Update the data in the database if there is any change to the file
+    names in drive.
+
+    Returns
+    -------
+    - JSON[str, int]: The count of files the program has scanned
+    """
+    return scan_drive()
+
+@app.get("/api/sort", tags=["utility"])
+def sort_years():
+    """Fetch the years of which data is available.
+
+    Returns
+    -------
+    - int, int: The starting and ending years of data available.
+    """
+    return get_valid_years()
+
 @app.post("/api/read-file", tags=["utility"])
 async def read_file(file: UploadFile):
     """Read the file uploaded by client.
@@ -130,22 +146,6 @@ async def read_file(file: UploadFile):
         dict[str, str]: The name of the file
     """
     return {"filename": file.filename}
-
-@app.post("/api/upload-file", tags=["upload"])
-async def upload_file_from_client(file: UploadFile):
-    """Upload the file given by user to Google Drive.
-
-    Parameters
-    ---------
-    - file `UploadFile`: The file that needs to be uploaded by the user.
-
-    Returns:
-        dict[str, str]: The id of the file after uploading to drive.
-    """
-    # * If you want to write the file locally, use below.
-    # with open(f"data/{file.filename}", "wb") as buffer:
-    #     buffer.write(await file.read())
-    return await upload_file_to_drive(file)
 
 def select_years(year: str=""):
     """Select the valid years from the query given to api.
