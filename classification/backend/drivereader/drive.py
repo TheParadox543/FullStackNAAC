@@ -12,13 +12,14 @@ from sys import exit
 from typing import Optional, TypeVar, Union
 
 # Import project specific modules.
+from fastapi import UploadFile
 from google.auth.exceptions import RefreshError
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
 from drivereader._type import (
     BaseFile,
@@ -237,3 +238,29 @@ def file_details_from_name(name: str, code_list: CodeList):
             return None, None
         else:
             return year, code
+
+async def upload_file_to_drive(file: UploadFile):
+    """Upload a file to drive
+
+    Parameters
+    -----------
+    - file (fastapi.UploadFile): _description_
+    """
+    service = make_connection()
+    try:
+        file_metadata = {
+            "name": file.filename,
+            "parents": ["1jdXUkSPl06axEnaTQryyQuMx9tZlGghX"] # Events folder
+        }
+        media = MediaIoBaseUpload(
+            BytesIO(await file.read()), mimetype=file.content_type,
+            chunksize=1024*1024, resumable=True
+        )
+        file = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id"
+        ).execute()
+        return {"file_id": file.get("id")}
+    except HttpError as error:
+        return {"error": f"File could not be uploaded {error}"}

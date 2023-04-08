@@ -4,11 +4,11 @@ from time import perf_counter
 from typing import Annotated, Optional
 
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, File, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from _type import CodeValues
-from drivereader.drive import scan_drive
+from drivereader.drive import scan_drive, upload_file_to_drive
 from drivereader.database import (
     fetch_all_folders,
     fetch_all_files,
@@ -71,6 +71,17 @@ def read_all_files(
     if year is not None:
         search["year"] = year
     return fetch_all_files(search)
+
+# @app.post("/api/files-upload")
+# async def create_file(file: Annotated[bytes, File()]):
+#     return {"file_size": len(file)}
+
+@app.post("/api/upload-file")
+async def upload_file_from_client(file: UploadFile):
+    # with open(f"data/{file.filename}", "wb") as buffer:
+    #     buffer.write(await file.read())
+    return await upload_file_to_drive(file)
+    return {"filename": file.filename}
 
 # @app.get("/api/files/{code}")
 # def read_files_by_code(code: str):
