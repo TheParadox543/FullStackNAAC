@@ -1,10 +1,19 @@
 import asyncio
 import re
+from datetime import date
+from json import load
 from time import perf_counter
 from typing import Annotated, Union
 
 import uvicorn
-from fastapi import HTTPException, FastAPI, File, Query, UploadFile
+from fastapi import (
+    HTTPException,
+    FastAPI,
+    File,
+    Form,
+    Query,
+    UploadFile
+)
 from fastapi.middleware.cors import CORSMiddleware
 
 from _type import CodeValues
@@ -21,6 +30,9 @@ time_now = perf_counter()
 app = FastAPI()
 
 origins = ["https://localhost:3000"]
+
+with open("data/code_list.json", "r") as code_info:
+    CODE_LIST = load(code_info)
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,7 +58,7 @@ async def upload_file_from_client(file: UploadFile):
 
     Parameters
     ---------
-    - file `UploadFile`: The file that needs to be uploaded by the user.
+    - file `UploadFile`: The fpile that needs to be uploaded by the user.
 
     Returns:
         dict[str, str]: The id of the file after uploading to drive.
@@ -55,6 +67,21 @@ async def upload_file_from_client(file: UploadFile):
     # with open(f"data/{file.filename}", "wb") as buffer:
     #     buffer.write(await file.read())
     return await upload_file_to_drive(file)
+
+@app.post("/api/form", tags=["upload"])
+async def login(
+    file: Annotated[UploadFile, File()],
+    code: Annotated[CodeValues, Form()],
+    author: Annotated[str, Form()],
+    date: Annotated[date, Form()],
+):
+    return {
+        "file_size": file.size,
+        "author": author,
+        "file_content": file.content_type,
+        "code": code,
+        "date": date,
+    }
 
 @app.get("/api/folders", tags=["drive"])
 def read_all_folders():
@@ -84,7 +111,7 @@ def read_all_files(
         Query(description="The code that needs to be searched for")
     ]=None,
     year: Annotated[str,
-        Query(min_length=4, max_length=9,example="2022-2023")
+        Query(min_length=4, max_length=9,example="2021-2023")
     ]=""
 ):
     """Get the data of all files that have been categorized
@@ -98,6 +125,8 @@ def read_all_files(
     -------
     - dict: The details of files that have been asked for.
     """
+    if code not in CODE_LIST:
+        raise HTTPException(status_code=404, detail="Code not found")
     start_year, end_year = select_years(year)
     return fetch_all_files(code, start_year, end_year)
 
@@ -174,4 +203,5 @@ def select_years(year: str=""):
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
+    # uvicorn.run("main:app", host="0.0.0.0", port=80)
 # print(perf_counter() - time_now)
