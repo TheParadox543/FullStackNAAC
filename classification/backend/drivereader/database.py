@@ -1,10 +1,20 @@
+import os
+from certifi import where
+from dotenv import load_dotenv
 from json import load
 from typing import Union
 
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
 
-client = MongoClient("mongodb://localhost:27017")
+load_dotenv()
+ca = where()
+
+password = os.getenv("DB_TOKEN")
+# uri = f"mongodb+srv://samuelalexkoshy:{password}@naac.xrl9ioe.mongodb.net/?retryWrites=true"
+
+client = MongoClient(password, tlsCAFile=ca)
+# client = MongoClient("mongodb://localhost:27017")
 database = client.NAAC
 files_data = database.files_data
 folders_data = database.folders_data

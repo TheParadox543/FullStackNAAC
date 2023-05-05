@@ -4,3 +4,4 @@ credentials.json
 token.json
 *.log
 settings.json
+.env
