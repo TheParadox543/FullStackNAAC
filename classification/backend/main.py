@@ -105,7 +105,9 @@ def read_sheet():
     excel = ExcelWorker()
     return excel.code_list
 
-@app.get("/api/files", tags=["data"])
+@app.get("/api/files", tags=["data"],
+    response_description="The list of files"
+)
 def read_all_files(
     code: Annotated[Union[str, None],
         Query(description="The code that needs to be searched for")
